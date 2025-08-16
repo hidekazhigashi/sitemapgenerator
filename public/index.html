@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sitemap Generator</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗺️ Sitemap Generator</h1>
+            <p>ウェブサイトをスクレイピングして、サイトマップを生成します</p>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <form id="sitemapForm">
+                    <div class="form-group">
+                        <label for="url">ウェブサイトURL:</label>
+                        <input 
+                            type="url" 
+                            id="url" 
+                            name="url" 
+                            placeholder="https://example.com"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="options">
+                        <div class="form-group">
+                            <label for="maxDepth">最大深度:</label>
+                            <select id="maxDepth" name="maxDepth">
+                                <option value="1">1階層</option>
+                                <option value="2">2階層</option>
+                                <option value="3" selected>3階層</option>
+                                <option value="4">4階層</option>
+                                <option value="5">5階層</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="maxPages">最大ページ数:</label>
+                            <select id="maxPages" name="maxPages">
+                                <option value="50">50ページ</option>
+                                <option value="100" selected>100ページ</option>
+                                <option value="200">200ページ</option>
+                                <option value="500">500ページ</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="advanced-settings">
+                        <button type="button" id="toggleAdvanced" class="toggle-btn">
+                            <span>⚙️ 詳細設定</span>
+                            <span class="toggle-icon">▼</span>
+                        </button>
+                        
+                        <div id="advancedOptions" class="advanced-options" style="display: none;">
+                            <h4>Node Crawler設定</h4>
+                            <div class="advanced-grid">
+                                <div class="form-group">
+                                    <label for="maxConnections">同時接続数:</label>
+                                    <select id="maxConnections" name="maxConnections">
+                                        <option value="1">1接続</option>
+                                        <option value="2">2接続</option>
+                                        <option value="3">3接続</option>
+                                        <option value="5" selected>5接続 (推奨)</option>
+                                        <option value="8">8接続</option>
+                                        <option value="10">10接続</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="timeout">タイムアウト (秒):</label>
+                                    <select id="timeout" name="timeout">
+                                        <option value="5">5秒</option>
+                                        <option value="10" selected>10秒 (推奨)</option>
+                                        <option value="15">15秒</option>
+                                        <option value="20">20秒</option>
+                                        <option value="30">30秒</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="retries">リトライ回数:</label>
+                                    <select id="retries" name="retries">
+                                        <option value="0">0回</option>
+                                        <option value="1">1回</option>
+                                        <option value="2" selected>2回 (推奨)</option>
+                                        <option value="3">3回</option>
+                                        <option value="5">5回</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="delay">リクエスト間隔 (ms):</label>
+                                    <select id="delay" name="delay">
+                                        <option value="100">100ms</option>
+                                        <option value="250">250ms</option>
+                                        <option value="500" selected>500ms (推奨)</option>
+                                        <option value="1000">1000ms</option>
+                                        <option value="2000">2000ms</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="settings-note">
+                                <p>⚠️ 同時接続数やリクエスト間隔を変更する際は、対象サーバーへの負荷を考慮してください。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="generateBtn">
+                        <span class="btn-text">サイトマップを生成</span>
+                        <span class="spinner" style="display: none;"></span>
+                    </button>
+                </form>
+            </div>
+
+            <div class="status-section" id="statusSection" style="display: none;">
+                <div class="status-card">
+                    <h3>生成状況</h3>
+                    <div class="progress-info">
+                        <div class="progress-text" id="progressText">準備中...</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-section" id="resultSection" style="display: none;">
+                <div class="result-card">
+                    <h3>✅ 生成完了</h3>
+                    <p>サイトマップの生成が完了しました。ダウンロードが自動的に開始されます。</p>
+                    <button id="downloadBtn" class="download-btn">📥 再ダウンロード</button>
+                </div>
+            </div>
+
+            <div class="error-section" id="errorSection" style="display: none;">
+                <div class="error-card">
+                    <h3>❌ エラーが発生しました</h3>
+                    <p id="errorMessage"></p>
+                    <button id="retryBtn" class="retry-btn">🔄 再試行</button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <div class="features">
+                <div class="feature">
+                    <h4>🔍 高度なスクレイピング</h4>
+                    <p>Cheerioを使用して効率的にWebページを解析</p>
+                </div>
+                <div class="feature">
+                    <h4>📊 詳細なレポート</h4>
+                    <p>URL、タイトル、メタ情報、階層構造を含む詳細なExcelファイル</p>
+                </div>
+                <div class="feature">
+                    <h4>⚡ 高速処理</h4>
+                    <p>並行処理により高速なサイトマップ生成</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
