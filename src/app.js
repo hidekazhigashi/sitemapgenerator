@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const { generateSitemap } = require('./scraper');
 const { createExcelFile } = require('./excelGenerator');
+const { createZipFile } = require('./zipGenerator');
 
 // 進行状況管理
 const progressSessions = new Map();
@@ -64,7 +65,10 @@ function sendProgress(sessionId, phase, message, percentage, details = {}) {
 
 app.post('/api/generate-sitemap', async (req, res) => {
     try {
-        const { url, maxDepth, maxPages, maxConnections, timeout, retries, delay, sessionId } = req.body;
+        const { 
+            url, maxDepth, maxPages, maxConnections, timeout, retries, delay, sessionId,
+            captureScreenshots, screenshotViewport, screenshotFormat, screenshotQuality, fullPageScreenshot 
+        } = req.body;
         
         if (!url) {
             return res.status(400).json({ error: 'URL is required' });
@@ -77,32 +81,58 @@ app.post('/api/generate-sitemap', async (req, res) => {
             timeout: timeout || 10000,
             retries: retries || 2,
             delay: delay || 500,
+            captureScreenshots: captureScreenshots || false,
+            screenshotViewport: screenshotViewport || 'desktop',
+            screenshotFormat: screenshotFormat || 'png',
+            screenshotQuality: screenshotQuality || 80,
+            fullPageScreenshot: fullPageScreenshot || false,
             progressCallback: (phase, message, percentage, details) => {
                 sendProgress(sessionId, phase, message, percentage, details);
             }
         };
 
         console.log(`Starting sitemap generation for: ${url} with options:`, options);
+        console.log('Screenshot settings:', { 
+            captureScreenshots: options.captureScreenshots, 
+            screenshotViewport: options.screenshotViewport,
+            screenshotFormat: options.screenshotFormat 
+        });
         
         // 初期化フェーズ
         sendProgress(sessionId, 'initializing', '設定を初期化しています...', 5);
         
         const result = await generateSitemap(url, options);
-        const { sitemapData, sslInfo } = result;
+        const { sitemapData, sslInfo, screenshotFiles, screenshotDir } = result;
         
         // Excel生成フェーズ
         sendProgress(sessionId, 'generating-excel', 'Excelファイルを生成しています...', 90);
         
-        const excelBuffer = await createExcelFile(sitemapData, sslInfo, url);
+        const excelBuffer = await createExcelFile(sitemapData, sslInfo, url, screenshotFiles);
+        
+        // 常にZIPファイルを作成（スクリーンショットがなくてもExcelを圧縮）
+        sendProgress(sessionId, 'creating-zip', 'ZIPファイルを作成しています...', 95);
+        
+        const zipBuffer = await createZipFile(excelBuffer, sitemapData, screenshotFiles || [], screenshotDir, url);
+        
+        // 一時ディレクトリをクリーンアップ
+        if (screenshotDir) {
+            const generator = new (require('./scraper').SitemapGenerator)(url);
+            generator.screenshotDir = screenshotDir;
+            generator.cleanupScreenshotDir();
+        }
         
         // 完了フェーズ
         sendProgress(sessionId, 'completed', '完了しました！', 100, {
-            totalPages: sitemapData.length
+            totalPages: sitemapData.length,
+            screenshots: screenshotFiles ? screenshotFiles.length : 0
         });
         
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename="sitemap.xlsx"');
-        res.send(excelBuffer);
+        const domain = new URL(url).hostname.replace(/^www\./, '');
+        const timestamp = new Date().toISOString().slice(0, 10);
+        
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename="sitemap_${domain}_${timestamp}.zip"`);
+        res.send(zipBuffer);
         
     } catch (error) {
         console.error('Error generating sitemap:', error);

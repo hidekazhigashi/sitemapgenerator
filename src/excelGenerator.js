@@ -32,7 +32,7 @@ function parseUrlPath(url) {
     }
 }
 
-async function createExcelFile(sitemapData, sslInfo, baseUrl) {
+async function createExcelFile(sitemapData, sslInfo, baseUrl, screenshotFiles = []) {
     const workbook = new ExcelJS.Workbook();
     
     // Summaryシートを最初に作成
@@ -48,7 +48,11 @@ async function createExcelFile(sitemapData, sslInfo, baseUrl) {
         return pathA.localeCompare(pathB);
     });
 
-    worksheet.columns = [
+    // スクリーンショットが含まれているかチェック
+    const hasScreenshots = sortedData.some(page => page.screenshot !== null && page.screenshot !== undefined);
+
+    // 基本的な列定義
+    const baseColumns = [
         { header: 'No.', key: 'no', width: 8 },
         { header: 'Level 1', key: 'level1', width: 20 },
         { header: 'Level 2', key: 'level2', width: 20 },
@@ -64,6 +68,13 @@ async function createExcelFile(sitemapData, sslInfo, baseUrl) {
         { header: 'Content Type', key: 'contentType', width: 30 }
     ];
 
+    // スクリーンショット列を追加
+    if (hasScreenshots) {
+        baseColumns.push({ header: 'Screenshot', key: 'screenshot', width: 15 });
+    }
+
+    worksheet.columns = baseColumns;
+
     const headerRow = worksheet.getRow(1);
     headerRow.font = { bold: true };
     headerRow.fill = {
@@ -75,7 +86,7 @@ async function createExcelFile(sitemapData, sslInfo, baseUrl) {
     sortedData.forEach((page, index) => {
         const urlParts = parseUrlPath(page.url);
         
-        const row = worksheet.addRow({
+        const rowData = {
             no: index + 1,
             level1: urlParts.level1,
             level2: urlParts.level2,
@@ -89,7 +100,25 @@ async function createExcelFile(sitemapData, sslInfo, baseUrl) {
             depth: page.depth,
             status: page.status,
             contentType: page.contentType
-        });
+        };
+
+        // スクリーンショット情報を追加
+        if (hasScreenshots) {
+            if (page.screenshot && page.screenshot !== 'Error' && page.screenshot !== 'Capture Error' && page.screenshot !== 'Browser Error') {
+                // Excelの連番に対応するファイル名を表示
+                const excelNumber = (index + 1).toString().padStart(3, '0');
+                // screenshotFilesからフォーマット情報を取得
+                const screenshotFile = screenshotFiles.find(sf => sf.url === page.url);
+                const format = screenshotFile ? screenshotFile.format : 'png';
+                rowData.screenshot = `${excelNumber}.${format}`;
+            } else if (page.screenshot) {
+                rowData.screenshot = page.screenshot; // Error情報を表示
+            } else {
+                rowData.screenshot = 'None';
+            }
+        }
+
+        const row = worksheet.addRow(rowData);
 
         if (page.status !== 200 && page.status !== '200') {
             row.fill = {
@@ -124,6 +153,27 @@ async function createExcelFile(sitemapData, sslInfo, baseUrl) {
         };
     });
 
+    // テーブル列定義を動的に作成
+    const tableColumns = [
+        { name: 'No.' },
+        { name: 'Level 1' },
+        { name: 'Level 2' },
+        { name: 'Level 3' },
+        { name: 'Level 4' },
+        { name: 'Level 5' },
+        { name: 'Full Path' },
+        { name: 'Page Title' },
+        { name: 'Meta Description' },
+        { name: 'H1' },
+        { name: 'Depth' },
+        { name: 'Status' },
+        { name: 'Content Type' }
+    ];
+
+    if (hasScreenshots) {
+        tableColumns.push({ name: 'Screenshot' });
+    }
+
     worksheet.addTable({
         name: 'SitemapTable',
         ref: 'A1',
@@ -133,24 +183,10 @@ async function createExcelFile(sitemapData, sslInfo, baseUrl) {
             theme: 'TableStyleMedium9',
             showRowStripes: true,
         },
-        columns: [
-            { name: 'No.' },
-            { name: 'Level 1' },
-            { name: 'Level 2' },
-            { name: 'Level 3' },
-            { name: 'Level 4' },
-            { name: 'Level 5' },
-            { name: 'Full Path' },
-            { name: 'Page Title' },
-            { name: 'Meta Description' },
-            { name: 'H1' },
-            { name: 'Depth' },
-            { name: 'Status' },
-            { name: 'Content Type' }
-        ],
+        columns: tableColumns,
         rows: sortedData.map((page, index) => {
             const urlParts = parseUrlPath(page.url);
-            return [
+            const row = [
                 index + 1,
                 urlParts.level1,
                 urlParts.level2,
@@ -165,6 +201,23 @@ async function createExcelFile(sitemapData, sslInfo, baseUrl) {
                 page.status,
                 page.contentType
             ];
+
+            if (hasScreenshots) {
+                if (page.screenshot && page.screenshot !== 'Error' && page.screenshot !== 'Capture Error' && page.screenshot !== 'Browser Error') {
+                    // Excelの連番に対応するファイル名を表示
+                    const excelNumber = (index + 1).toString().padStart(3, '0');
+                    // screenshotFilesからフォーマット情報を取得
+                    const screenshotFile = screenshotFiles.find(sf => sf.url === page.url);
+                    const format = screenshotFile ? screenshotFile.format : 'png';
+                    row.push(`${excelNumber}.${format}`);
+                } else if (page.screenshot) {
+                    row.push(page.screenshot); // Error情報を表示
+                } else {
+                    row.push('None');
+                }
+            }
+
+            return row;
         })
     });
 
@@ -179,6 +232,28 @@ async function createExcelFile(sitemapData, sslInfo, baseUrl) {
             return 'unknown';
         }
     }));
+
+    // スクリーンショット統計
+    let screenshotStats = null;
+    if (hasScreenshots) {
+        const successfulScreenshots = sortedData.filter(page => 
+            page.screenshot && 
+            page.screenshot !== 'Error' && 
+            page.screenshot !== 'Capture Error' && 
+            page.screenshot !== 'Browser Error'
+        ).length;
+        const failedScreenshots = sortedData.filter(page => 
+            page.screenshot && 
+            (page.screenshot === 'Error' || page.screenshot === 'Capture Error' || page.screenshot === 'Browser Error')
+        ).length;
+        
+        screenshotStats = {
+            total: totalPages,
+            successful: successfulScreenshots,
+            failed: failedScreenshots,
+            successRate: Math.round((successfulScreenshots / totalPages) * 100)
+        };
+    }
 
     // Summary情報を追加
     summaryWorksheet.addRow(['Sitemap Analysis Report']);
@@ -209,17 +284,35 @@ async function createExcelFile(sitemapData, sslInfo, baseUrl) {
     summaryWorksheet.addRow(['Error Pages:', errorPages]);
     summaryWorksheet.addRow(['Maximum Depth:', maxDepth]);
     summaryWorksheet.addRow(['Unique Domains:', uniqueDomains.size]);
+    summaryWorksheet.addRow([]);
+    
+    // スクリーンショット統計
+    if (screenshotStats) {
+        summaryWorksheet.addRow(['Screenshot Statistics']);
+        summaryWorksheet.addRow(['Screenshots Captured:', screenshotStats.successful]);
+        summaryWorksheet.addRow(['Screenshot Failures:', screenshotStats.failed]);
+        summaryWorksheet.addRow(['Success Rate:', `${screenshotStats.successRate}%`]);
+        summaryWorksheet.addRow([]);
+    }
+    
     summaryWorksheet.addRow(['Generated:', new Date().toLocaleString()]);
 
     // Summaryシートのスタイリング
     summaryWorksheet.getCell('A1').font = { bold: true, size: 16, color: { argb: 'FF0066CC' } };
     summaryWorksheet.getCell('A3').font = { bold: true, size: 12, color: { argb: 'FF333333' } };
     
+    // セクションヘッダーのスタイリング（動的に行数を計算）
+    let currentRow = 9; // Crawling Statistics行
     if (sslInfo && baseUrl.startsWith('https://')) {
         summaryWorksheet.getCell('A9').font = { bold: true, size: 12, color: { argb: 'FF333333' } };
-        summaryWorksheet.getCell('A16').font = { bold: true, size: 12, color: { argb: 'FF333333' } };
-    } else {
-        summaryWorksheet.getCell('A9').font = { bold: true, size: 12, color: { argb: 'FF333333' } };
+        currentRow = 16; // SSL情報がある場合は16行目
+    }
+    summaryWorksheet.getCell(`A${currentRow}`).font = { bold: true, size: 12, color: { argb: 'FF333333' } };
+    
+    // スクリーンショット統計のヘッダースタイリング
+    if (screenshotStats) {
+        const screenshotHeaderRow = currentRow + 6; // Crawling Statisticsの後
+        summaryWorksheet.getCell(`A${screenshotHeaderRow}`).font = { bold: true, size: 12, color: { argb: 'FF333333' } };
     }
     
     summaryWorksheet.getColumn('A').width = 25;

@@ -105,8 +105,60 @@
                                 </div>
                             </div>
                             
+                            <h4>スクリーンショット設定</h4>
+                            <div class="screenshot-options">
+                                <div class="form-group checkbox-group">
+                                    <label for="captureScreenshots" class="checkbox-label">
+                                        <input type="checkbox" id="captureScreenshots" name="captureScreenshots">
+                                        <span class="checkmark"></span>
+                                        📸 スクリーンショットを取得する
+                                    </label>
+                                    <p class="option-note">各ページの画面キャプチャを取得します（処理時間が大幅に増加します）</p>
+                                </div>
+                                
+                                <div id="screenshotSettings" class="screenshot-settings" style="display: none;">
+                                    <div class="advanced-grid">
+                                        <div class="form-group">
+                                            <label for="screenshotViewport">画面サイズ:</label>
+                                            <select id="screenshotViewport" name="screenshotViewport">
+                                                <option value="desktop" selected>デスクトップ (1920x1080)</option>
+                                                <option value="laptop">ラップトップ (1280x720)</option>
+                                                <option value="tablet">タブレット (768x1024)</option>
+                                                <option value="mobile">モバイル (375x667)</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="screenshotFormat">画像形式:</label>
+                                            <select id="screenshotFormat" name="screenshotFormat">
+                                                <option value="png" selected>PNG (高品質)</option>
+                                                <option value="jpeg">JPEG (軽量)</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="screenshotQuality">画質 (JPEG時):</label>
+                                            <select id="screenshotQuality" name="screenshotQuality">
+                                                <option value="60">60% (軽量)</option>
+                                                <option value="80" selected>80% (標準)</option>
+                                                <option value="95">95% (高品質)</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="fullPageScreenshot" class="checkbox-label">
+                                                <input type="checkbox" id="fullPageScreenshot" name="fullPageScreenshot" checked>
+                                                <span class="checkmark"></span>
+                                                フルページ取得
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="settings-note">
                                 <p>⚠️ 同時接続数やリクエスト間隔を変更する際は、対象サーバーへの負荷を考慮してください。</p>
+                                <p>📸 スクリーンショット取得は処理時間とメモリ使用量を大幅に増加させます。</p>
                             </div>
                         </div>
                     </div>

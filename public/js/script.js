@@ -16,6 +16,18 @@ class SitemapGenerator {
         document.getElementById('retryBtn').addEventListener('click', this.retry.bind(this));
         document.getElementById('downloadBtn').addEventListener('click', this.downloadAgain.bind(this));
         document.getElementById('toggleAdvanced').addEventListener('click', this.toggleAdvancedSettings.bind(this));
+        document.getElementById('captureScreenshots').addEventListener('change', this.toggleScreenshotSettings.bind(this));
+    }
+    
+    toggleScreenshotSettings() {
+        const checkbox = document.getElementById('captureScreenshots');
+        const settings = document.getElementById('screenshotSettings');
+        
+        if (checkbox.checked) {
+            settings.style.display = 'block';
+        } else {
+            settings.style.display = 'none';
+        }
     }
     
     toggleAdvancedSettings() {
@@ -48,6 +60,13 @@ class SitemapGenerator {
         const retries = parseInt(formData.get('retries')) || 2;
         const delay = parseInt(formData.get('delay')) || 500;
         
+        // スクリーンショット設定の値を取得
+        const captureScreenshots = formData.get('captureScreenshots') === 'on';
+        const screenshotViewport = formData.get('screenshotViewport') || 'desktop';
+        const screenshotFormat = formData.get('screenshotFormat') || 'png';
+        const screenshotQuality = parseInt(formData.get('screenshotQuality')) || 80;
+        const fullPageScreenshot = formData.get('fullPageScreenshot') === 'on';
+        
         if (!this.validateUrl(url)) {
             this.showError('有効なURLを入力してください');
             return;
@@ -62,7 +81,12 @@ class SitemapGenerator {
                 maxConnections, 
                 timeout, 
                 retries, 
-                delay 
+                delay,
+                captureScreenshots,
+                screenshotViewport,
+                screenshotFormat,
+                screenshotQuality,
+                fullPageScreenshot
             });
         } catch (error) {
             this.showError(error.message);
@@ -144,9 +168,9 @@ class SitemapGenerator {
         try {
             const domain = new URL(url).hostname.replace(/^www\./, '');
             const timestamp = new Date().toISOString().slice(0, 10);
-            return `sitemap_${domain}_${timestamp}.xlsx`;
+            return `sitemap_${domain}_${timestamp}.zip`;
         } catch {
-            return `sitemap_${Date.now()}.xlsx`;
+            return `sitemap_${Date.now()}.zip`;
         }
     }
     
@@ -200,6 +224,7 @@ class SitemapGenerator {
             'starting-crawler': { text: '🚀 クローラー開始', color: '#e67e22' },
             'crawling': { text: '🕷️ クローリング中', color: '#27ae60' },
             'generating-excel': { text: '📊 Excel生成中', color: '#9b59b6' },
+            'creating-zip': { text: '📦 ZIP作成中', color: '#8e44ad' },
             'completed': { text: '✅ 完了', color: '#2ecc71' }
         };
         
