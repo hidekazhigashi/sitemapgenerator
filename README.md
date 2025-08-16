@@ -99,8 +99,6 @@ sitemapgenerator/
 │   ├── index.html          # メインHTML
 │   ├── css/style.css       # スタイルシート
 │   └── js/script.js        # フロントエンドJS
-├── sample/
-│   └── sample.xlsx         # サンプル出力ファイル
 ├── package.json
 └── README.md
 ```
